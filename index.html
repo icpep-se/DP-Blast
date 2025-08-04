@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -47,7 +48,7 @@
     #frameCanvas {
       width: 100%;
       touch-action: none;
-      cursor: grab;
+      cursor: move;
     }
 
     input[type="file"] {
@@ -90,11 +91,11 @@
     }
   </style>
 </head>
+
 <body>
   <header>
     <h1>ICpEP.SE DP Blast</h1>
   </header>
-
   <div class="container">
     <div class="frame-preview">
       <canvas id="frameCanvas" width="800" height="800"></canvas>
@@ -119,103 +120,64 @@
   <script>
     const canvas = document.getElementById('frameCanvas');
     const ctx = canvas.getContext('2d');
-
     let frameImage = new Image();
-    let uploadedImage = null;
-
-    let imgX = 0, imgY = 0;
-    let imgScale = 1;
+    let uploadedImage = new Image();
     let dragging = false;
-    let dragStartX = 0, dragStartY = 0;
+    let offsetX, offsetY;
+    let imgX = 0, imgY = 0, imgScale = 1;
 
     frameImage.src = 'frame.png';
     frameImage.onload = drawCanvas;
 
     function drawCanvas() {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-      if (uploadedImage) {
-        ctx.drawImage(
-          uploadedImage,
-          imgX,
-          imgY,
-          uploadedImage.width * imgScale,
-          uploadedImage.height * imgScale
-        );
+      if (uploadedImage.src) {
+        ctx.drawImage(uploadedImage, imgX, imgY, uploadedImage.width * imgScale, uploadedImage.height * imgScale);
       }
-
       ctx.drawImage(frameImage, 0, 0, canvas.width, canvas.height);
     }
 
     document.getElementById('imageInput').addEventListener('change', function (e) {
       const file = e.target.files[0];
-      if (!file) return;
-
       const reader = new FileReader();
       reader.onload = function (event) {
         uploadedImage = new Image();
         uploadedImage.onload = function () {
-          const ratio = Math.max(
-            canvas.width / uploadedImage.width,
-            canvas.height / uploadedImage.height
-          );
+          // Fit the image to the canvas
+          const ratio = Math.max(canvas.width / uploadedImage.width, canvas.height / uploadedImage.height);
           imgScale = ratio;
           imgX = (canvas.width - uploadedImage.width * ratio) / 2;
           imgY = (canvas.height - uploadedImage.height * ratio) / 2;
           drawCanvas();
           document.getElementById('captionSlide').style.display = 'block';
-        };
+        }
         uploadedImage.src = event.target.result;
-      };
-      reader.readAsDataURL(file);
+      }
+      if (file) reader.readAsDataURL(file);
     });
 
     canvas.addEventListener('mousedown', function (e) {
       dragging = true;
-      dragStartX = e.offsetX - imgX;
-      dragStartY = e.offsetY - imgY;
+      offsetX = e.offsetX - imgX;
+      offsetY = e.offsetY - imgY;
     });
 
-    canvas.addEventListener('mouseup', () => dragging = false);
-    canvas.addEventListener('mouseleave', () => dragging = false);
+    canvas.addEventListener('mouseup', function () {
+      dragging = false;
+    });
 
     canvas.addEventListener('mousemove', function (e) {
-      if (dragging && uploadedImage) {
-        imgX = e.offsetX - dragStartX;
-        imgY = e.offsetY - dragStartY;
+      if (dragging) {
+        imgX = e.offsetX - offsetX;
+        imgY = e.offsetY - offsetY;
         drawCanvas();
       }
-    });
-
-    canvas.addEventListener('wheel', function (e) {
-      if (!uploadedImage) return;
-
-      e.preventDefault();
-      const zoomSpeed = 0.1;
-      const prevScale = imgScale;
-      const mouseX = e.offsetX;
-      const mouseY = e.offsetY;
-
-      if (e.deltaY < 0) {
-        imgScale *= 1 + zoomSpeed;
-      } else {
-        imgScale *= 1 - zoomSpeed;
-      }
-
-      imgScale = Math.min(Math.max(imgScale, 0.1), 10);
-
-      const dx = mouseX - imgX;
-      const dy = mouseY - imgY;
-      imgX = mouseX - dx * (imgScale / prevScale);
-      imgY = mouseY - dy * (imgScale / prevScale);
-
-      drawCanvas();
     });
 
     function downloadImage() {
       const link = document.createElement('a');
       link.download = 'framed-photo.png';
-      link.href = canvas.toDataURL('image/png');
+      link.href = canvas.toDataURL();
       link.click();
     }
 
@@ -226,4 +188,5 @@
     }
   </script>
 </body>
+
 </html>
