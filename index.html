@@ -1,34 +1,9 @@
-<!DOCTYPE html>
-<html lang="en">
-
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>ICpEP.SE DP Blast</title>
-  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
-  <style>
-    * {
-      box-sizing: border-box;
-      font-family: 'Poppins', sans-serif;
-    }
-
-    body {
-      margin: 0;
-      background: #f0f2f5;
-      color: #333;
-      padding: 0 1rem;
-    }
-
-    header {
-      text-align: center;
-      padding: 1rem 0;
-      background-color: #004aad;
-      color: white;
+   color: white;
     }
 
     .container {
-      max-width: 600px;
-      margin: 1rem auto;
+      max-width: 500px;
+      margin: 2rem auto;
       background: white;
       border-radius: 12px;
       box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
@@ -42,19 +17,17 @@
       background-color: #e0e0e0;
       border-radius: 10px;
       overflow: hidden;
-      touch-action: none;
+      margin-bottom: 1rem;
     }
 
     #frameCanvas {
       width: 100%;
-      height: 100%;
-      display: block;
       touch-action: none;
       cursor: move;
     }
 
     input[type="file"] {
-      margin-top: 1rem;
+      margin-bottom: 1rem;
       display: block;
     }
 
@@ -90,7 +63,6 @@
       font-size: 14px;
       border-radius: 6px;
       border: 1px solid #ccc;
-      resize: vertical;
     }
   </style>
 </head>
@@ -99,13 +71,12 @@
   <header>
     <h1>ICpEP.SE DP Blast</h1>
   </header>
-
   <div class="container">
     <div class="frame-preview">
       <canvas id="frameCanvas" width="800" height="800"></canvas>
     </div>
 
-    <input type="file" id="imageInput" accept="image/*" />
+    <input type="file" id="imageInput" accept="image/*">
     <button class="btn" onclick="downloadImage()">Download</button>
 
     <div id="captionSlide">
@@ -129,7 +100,6 @@
     let dragging = false;
     let offsetX, offsetY;
     let imgX = 0, imgY = 0, imgScale = 1;
-    let initialDistance = null;
 
     frameImage.src = 'frame.png';
     frameImage.onload = drawCanvas;
@@ -148,19 +118,19 @@
       reader.onload = function (event) {
         uploadedImage = new Image();
         uploadedImage.onload = function () {
+          // Fit the image to the canvas
           const ratio = Math.max(canvas.width / uploadedImage.width, canvas.height / uploadedImage.height);
           imgScale = ratio;
           imgX = (canvas.width - uploadedImage.width * ratio) / 2;
           imgY = (canvas.height - uploadedImage.height * ratio) / 2;
           drawCanvas();
           document.getElementById('captionSlide').style.display = 'block';
-        };
+        }
         uploadedImage.src = event.target.result;
-      };
+      }
       if (file) reader.readAsDataURL(file);
     });
 
-    // Mouse drag
     canvas.addEventListener('mousedown', function (e) {
       dragging = true;
       offsetX = e.offsetX - imgX;
@@ -177,49 +147,6 @@
         imgY = e.offsetY - offsetY;
         drawCanvas();
       }
-    });
-
-    // Zoom with mouse wheel
-    canvas.addEventListener('wheel', function (e) {
-      e.preventDefault();
-      const scaleAmount = e.deltaY > 0 ? 0.95 : 1.05;
-      imgScale *= scaleAmount;
-      drawCanvas();
-    });
-
-    // Pinch to zoom on touch devices
-    canvas.addEventListener('touchstart', function (e) {
-      if (e.touches.length === 2) {
-        initialDistance = Math.hypot(
-          e.touches[0].clientX - e.touches[1].clientX,
-          e.touches[0].clientY - e.touches[1].clientY
-        );
-      } else if (e.touches.length === 1) {
-        offsetX = e.touches[0].clientX - imgX;
-        offsetY = e.touches[0].clientY - imgY;
-      }
-    });
-
-    canvas.addEventListener('touchmove', function (e) {
-      e.preventDefault();
-      if (e.touches.length === 2 && initialDistance) {
-        const newDistance = Math.hypot(
-          e.touches[0].clientX - e.touches[1].clientX,
-          e.touches[0].clientY - e.touches[1].clientY
-        );
-        const zoom = newDistance / initialDistance;
-        imgScale *= zoom;
-        initialDistance = newDistance;
-        drawCanvas();
-      } else if (e.touches.length === 1 && !initialDistance) {
-        imgX = e.touches[0].clientX - offsetX;
-        imgY = e.touches[0].clientY - offsetY;
-        drawCanvas();
-      }
-    });
-
-    canvas.addEventListener('touchend', function () {
-      initialDistance = null;
     });
 
     function downloadImage() {
