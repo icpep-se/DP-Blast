@@ -7,16 +7,19 @@
   let imgX = 0, imgY = 0;
   let imgScale = 1;
   let dragging = false;
-  let lastTouchDist = 0;
   let startX = 0, startY = 0;
-  let offsetX = 0, offsetY = 0;
+  let lastTouchDist = 0;
+  let imageLoaded = false;
 
   frameImage.src = 'frame.png';
-  frameImage.onload = drawCanvas;
+  frameImage.onload = () => {
+    drawCanvas();
+  };
 
   function drawCanvas() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    if (uploadedImage.src) {
+
+    if (imageLoaded) {
       ctx.drawImage(
         uploadedImage,
         imgX, imgY,
@@ -24,35 +27,39 @@
         uploadedImage.height * imgScale
       );
     }
+
     ctx.drawImage(frameImage, 0, 0, canvas.width, canvas.height);
   }
 
   document.getElementById('imageInput').addEventListener('change', function (e) {
     const file = e.target.files[0];
+    if (!file) return;
+
     const reader = new FileReader();
     reader.onload = function (event) {
       uploadedImage = new Image();
       uploadedImage.onload = function () {
+        imageLoaded = true;
         const ratio = Math.max(
           canvas.width / uploadedImage.width,
           canvas.height / uploadedImage.height
         );
         imgScale = ratio;
-        imgX = (canvas.width - uploadedImage.width * ratio) / 2;
-        imgY = (canvas.height - uploadedImage.height * ratio) / 2;
+        imgX = (canvas.width - uploadedImage.width * imgScale) / 2;
+        imgY = (canvas.height - uploadedImage.height * imgScale) / 2;
         drawCanvas();
         document.getElementById('captionSlide').style.display = 'block';
       };
       uploadedImage.src = event.target.result;
     };
-    if (file) reader.readAsDataURL(file);
+    reader.readAsDataURL(file);
   });
 
-  // Mouse drag (for desktop)
+  // Mouse events
   canvas.addEventListener('mousedown', function (e) {
     dragging = true;
-    offsetX = e.offsetX - imgX;
-    offsetY = e.offsetY - imgY;
+    startX = e.offsetX - imgX;
+    startY = e.offsetY - imgY;
   });
 
   canvas.addEventListener('mouseup', function () {
@@ -61,18 +68,19 @@
 
   canvas.addEventListener('mousemove', function (e) {
     if (dragging) {
-      imgX = e.offsetX - offsetX;
-      imgY = e.offsetY - offsetY;
+      imgX = e.offsetX - startX;
+      imgY = e.offsetY - startY;
       drawCanvas();
     }
   });
 
-  // Touch events (for mobile)
+  // Touch events
   canvas.addEventListener('touchstart', function (e) {
     if (e.touches.length === 1) {
       dragging = true;
-      startX = e.touches[0].clientX - imgX;
-      startY = e.touches[0].clientY - imgY;
+      const touch = e.touches[0];
+      startX = touch.clientX - imgX;
+      startY = touch.clientY - imgY;
     } else if (e.touches.length === 2) {
       dragging = false;
       lastTouchDist = getDistance(e.touches[0], e.touches[1]);
@@ -82,8 +90,9 @@
   canvas.addEventListener('touchmove', function (e) {
     e.preventDefault();
     if (e.touches.length === 1 && dragging) {
-      imgX = e.touches[0].clientX - startX;
-      imgY = e.touches[0].clientY - startY;
+      const touch = e.touches[0];
+      imgX = touch.clientX - startX;
+      imgY = touch.clientY - startY;
       drawCanvas();
     } else if (e.touches.length === 2) {
       const currentDist = getDistance(e.touches[0], e.touches[1]);
@@ -107,7 +116,7 @@
   function downloadImage() {
     const link = document.createElement('a');
     link.download = 'framed-photo.png';
-    link.href = canvas.toDataURL();
+    link.href = canvas.toDataURL('image/png');
     link.click();
   }
 
