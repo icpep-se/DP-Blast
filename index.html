@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ICPEP DP Blast Frame Tool</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f5f5f5;
+      color: #333;
+    }
+    .container {
+      max-width: 500px;
+      margin: 2rem auto;
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      padding: 1rem;
+    }
+    .frame-preview {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 1/1;
+      background-color: #e0e0e0;
+      border-radius: 10px;
+      overflow: hidden;
+      margin-bottom: 1rem;
+    }
+    #frameCanvas {
+      width: 100%;
+      touch-action: none;
+      cursor: move;
+    }
+    input[type="file"] {
+      margin-bottom: 1rem;
+      display: block;
+    }
+    .btn {
+      background-color: #004aad;
+      color: white;
+      padding: 0.5rem 1rem;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 600;
+      margin-top: 0.5rem;
+    }
+    .btn:hover {
+      background-color: #003580;
+    }
+    #captionSlide {
+      display: none;
+      margin-top: 1.5rem;
+      padding: 1rem;
+      background-color: #e6f0ff;
+      border-left: 4px solid #004aad;
+      border-radius: 8px;
+    }
+    textarea {
+      width: 100%;
+      height: 200px;
+      margin-top: 1rem;
+      padding: 0.5rem;
+      font-size: 14px;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2 style="text-align:center;">ICPEP DP Blast Frame</h2>
+
+    <input type="file" id="imageInput" accept="image/*" />
+    <div class="frame-preview">
+      <canvas id="frameCanvas" width="500" height="500"></canvas>
+    </div>
+
+    <button class="btn" onclick="downloadImage()">Download Image</button>
+
+    <div id="captionSlide">
+      <label for="captionText"><strong>Caption:</strong></label>
+      <textarea id="captionText" readonly>#ICPEPSE #DPBlast #ICPEP2025</textarea>
+      <button class="btn" onclick="copyCaption()">Copy Caption</button>
+    </div>
+  </div>
+
+  <script>
+    const canvas = document.getElementById('frameCanvas');
+    const ctx = canvas.getContext('2d');
+
+    let frameImage = new Image();
+    let uploadedImage = new Image();
+    let bgImage = new Image(); // for optional background like "icpep dp blast"
+    let imgX = 0, imgY = 0;
+    let imgScale = 1;
+    let dragging = false;
+    let lastTouchDist = 0;
+    let startX = 0, startY = 0;
+    let offsetX = 0, offsetY = 0;
+
+    // Load frame (overlay)
+    frameImage.src = 'frame.png';
+    // Optional background (if you want to add 'icpep dp blast' as image)
+    // Uncomment below line and add your bg image named 'background.png'
+    // bgImage.src = 'background.png';
+
+    frameImage.onload = drawCanvas;
+
+    function drawCanvas() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      // Draw optional background
+      if (bgImage.src && bgImage.complete) {
+        ctx.drawImage(bgImage, 0, 0, canvas.width, canvas.height);
+      }
+
+      // Draw uploaded image
+      if (uploadedImage.src) {
+        ctx.drawImage(
+          uploadedImage,
+          imgX, imgY,
+          uploadedImage.width * imgScale,
+          uploadedImage.height * imgScale
+        );
+      }
+
+      // Draw frame overlay
+      if (frameImage.complete) {
+        ctx.drawImage(frameImage, 0, 0, canvas.width, canvas.height);
+      }
+    }
+
+    document.getElementById('imageInput').addEventListener('change', function (e) {
+      const file = e.target.files[0];
+      const reader = new FileReader();
+      reader.onload = function (event) {
+        uploadedImage = new Image();
+        uploadedImage.onload = function () {
+          const ratio = Math.max(
+            canvas.width / uploadedImage.width,
+            canvas.height / uploadedImage.height
+          );
+          imgScale = ratio;
+          imgX = (canvas.width - uploadedImage.width * ratio) / 2;
+          imgY = (canvas.height - uploadedImage.height * ratio) / 2;
+          drawCanvas();
+          document.getElementById('captionSlide').style.display = 'block';
+        };
+        uploadedImage.src = event.target.result;
+      };
+      if (file) reader.readAsDataURL(file);
+    });
+
+    // Mouse drag (desktop)
+    canvas.addEventListener('mousedown', function (e) {
+      dragging = true;
+      offsetX = e.offsetX - imgX;
+      offsetY = e.offsetY - imgY;
+    });
+
+    canvas.addEventListener('mouseup', function () {
+      dragging = false;
+    });
+
+    canvas.addEventListener('mousemove', function (e) {
+      if (dragging) {
+        imgX = e.offsetX - offsetX;
+        imgY = e.offsetY - offsetY;
+        drawCanvas();
+      }
+    });
+
+    // Touch (mobile)
+    canvas.addEventListener('touchstart', function (e) {
+      if (e.touches.length === 1) {
+        dragging = true;
+        startX = e.touches[0].clientX - imgX;
+        startY = e.touches[0].clientY - imgY;
+      } else if (e.touches.length === 2) {
+        dragging = false;
+        lastTouchDist = getDistance(e.touches[0], e.touches[1]);
+      }
+    });
+
+    canvas.addEventListener('touchmove', function (e) {
+      e.preventDefault();
+      if (e.touches.length === 1 && dragging) {
+        imgX = e.touches[0].clientX - startX;
+        imgY = e.touches[0].clientY - startY;
+        drawCanvas();
+      } else if (e.touches.length === 2) {
+        const currentDist = getDistance(e.touches[0], e.touches[1]);
+        const scaleChange = currentDist / lastTouchDist;
+        imgScale *= scaleChange;
+        lastTouchDist = currentDist;
+        drawCanvas();
+      }
+    }, { passive: false });
+
+    canvas.addEventListener('touchend', function () {
+      dragging = false;
+    });
+
+    function getDistance(touch1, touch2) {
+      const dx = touch2.clientX - touch1.clientX;
+      const dy = touch2.clientY - touch1.clientY;
+      return Math.sqrt(dx * dx + dy * dy);
+    }
+
+    function downloadImage() {
+      const link = document.createElement('a');
+      link.download = 'framed-photo.png';
+      link.href = canvas.toDataURL();
+      link.click();
+    }
+
+    function copyCaption() {
+      const caption = document.getElementById('captionText');
+      caption.select();
+      navigator.clipboard.writeText(caption.value);
+    }
+  </script>
+</body>
+</html>
